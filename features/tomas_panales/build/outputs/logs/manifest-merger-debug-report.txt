@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml:2:13-83
+INJECTED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml:2:13-83
+	package
+		INJECTED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml
+	xmlns:android
+		ADDED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml:2:23-81
+uses-sdk
+INJECTED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml reason: use-sdk injection requested
+INJECTED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml
+INJECTED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml
+	android:targetSdkVersion
+		INJECTED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml
+	android:minSdkVersion
+		INJECTED from D:\Android\Proyectos\BabyTraker\features\tomas_panales\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest10585324664927285818.xml
