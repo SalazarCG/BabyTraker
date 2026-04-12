@@ -2,6 +2,10 @@ package com.salazar.babytraker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
+val BlueSkyPrimary = Color(0xFF87CEEB)
+val BlueSkySecondary = Color(0xFFB0E2FF)
+val BlueSkyTertiary = Color(0xFFE0F6FF)
+
 val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
