@@ -21,10 +21,12 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.salazar.babytraker.features.inicio.presentation.ui.AddBabyScreen
 import com.salazar.babytraker.features.inicio.presentation.ui.InicioScreen
 import com.salazar.babytraker.features.medicos.presentation.ui.MedicosScreen
 import com.salazar.babytraker.features.tomas_panales.presentation.ui.TomasPanalesScreen
@@ -48,6 +50,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     bottomBar = {
                         BabyTrakerBottomBar(
+                            navController = navController,
                             onNavigate = { screen ->
                                 navController.navigate(screen) {
                                     popUpTo(navController.graph.findStartDestination().id) {
@@ -65,9 +68,22 @@ class MainActivity : ComponentActivity() {
                         startDestination = Screen.Inicio,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        composable<Screen.Inicio> { InicioScreen() }
+                        composable<Screen.Inicio> { 
+                            InicioScreen(
+                                onNavigateToAddBaby = {
+                                    navController.navigate(Screen.AddBaby)
+                                }
+                            ) 
+                        }
                         composable<Screen.TomasPanales> { TomasPanalesScreen() }
                         composable<Screen.Medicos> { MedicosScreen() }
+                        composable<Screen.AddBaby> { 
+                            AddBabyScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -77,9 +93,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BabyTrakerBottomBar(
+    navController: NavHostController,
     onNavigate: (Screen) -> Unit
 ) {
-    val navController = rememberNavController() // En una app real, usar el mismo controller
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -103,7 +119,7 @@ fun BabyTrakerBottomBar(
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = BlueSkyPrimary,
                     selectedTextColor = BlueSkyPrimary,
-                    indicatorColor = Color(0xFFE0F6FF), // Azul cielo muy suave para el fondo del icono seleccionado
+                    indicatorColor = Color(0xFFE0F6FF),
                     unselectedIconColor = Color.Gray,
                     unselectedTextColor = Color.Gray
                 )

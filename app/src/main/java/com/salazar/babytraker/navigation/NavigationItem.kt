@@ -15,6 +15,8 @@ sealed interface Screen {
     data object TomasPanales : Screen
     @Serializable
     data object Medicos : Screen
+    @Serializable
+    data object AddBaby : Screen
 }
 
 data class NavigationItem(

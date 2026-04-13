@@ -1,39 +1,49 @@
 package com.salazar.babytraker.core.data.local.dao
 
 import androidx.room.*
-import com.salazar.babytraker.core.data.local.entities.PanalEntity
-import com.salazar.babytraker.core.data.local.entities.TomaEntity
+import com.salazar.babytraker.core.data.local.entities.*
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BabyDao {
 
+    // --- BEBES ---
+    @Query("SELECT * FROM bebes")
+    fun getAllBabies(): Flow<List<BabyEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBaby(baby: BabyEntity)
+
     // --- TOMAS ---
-    @Query("SELECT * FROM tomas WHERE fechaDia = :fechaDia ORDER BY timestamp DESC")
-    fun getTomasPorDia(fechaDia: Long): Flow<List<TomaEntity>>
+    @Query("SELECT * FROM tomas WHERE fechaDia = :fechaDia AND babyId = :babyId ORDER BY timestamp DESC")
+    fun getTomasPorDia(fechaDia: Long, babyId: Long): Flow<List<TomaEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertToma(toma: TomaEntity)
 
     // --- PAÑALES ---
-    @Query("SELECT * FROM panales WHERE fechaDia = :fechaDia ORDER BY timestamp DESC")
-    fun getPanalesPorDia(fechaDia: Long): Flow<List<PanalEntity>>
+    @Query("SELECT * FROM panales WHERE fechaDia = :fechaDia AND babyId = :babyId ORDER BY timestamp DESC")
+    fun getPanalesPorDia(fechaDia: Long, babyId: Long): Flow<List<PanalEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPanal(panal: PanalEntity)
 
+    // --- DIARIO / COMENTARIOS ---
+    @Query("SELECT * FROM diarios_diarios WHERE babyId = :babyId")
+    fun getJournalsForBaby(babyId: Long): Flow<List<DailyJournalEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertJournal(journal: DailyJournalEntity)
+
     // --- ACTIVIDAD GLOBAL ---
-    /**
-     * Obtiene todos los días únicos donde hay al menos una actividad registrada.
-     * Útil para calendarios o listas de historial en Inicio.
-     */
     @Query("""
-        SELECT DISTINCT fechaDia FROM tomas 
-        UNION 
-        SELECT DISTINCT fechaDia FROM panales 
-        ORDER BY fechaDia DESC
+        SELECT DISTINCT fechaDia FROM (
+            SELECT fechaDia FROM tomas WHERE babyId = :babyId
+            UNION 
+            SELECT fechaDia FROM panales WHERE babyId = :babyId
+        ) ORDER BY fechaDia DESC
     """)
-    fun getDiasConActividad(): Flow<List<Long>>
+    fun getDiasConActividad(babyId: Long): Flow<List<Long>>
 
     @Delete
     suspend fun deleteToma(toma: TomaEntity)
