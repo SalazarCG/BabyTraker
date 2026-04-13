@@ -1,7 +1,6 @@
 package com.salazar.babytraker.features.inicio.presentation.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -9,7 +8,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -32,8 +30,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.salazar.babytraker.core.domain.model.Baby
 import com.salazar.babytraker.core.domain.model.ResumenDia
+import com.salazar.babytraker.core.ui.components.BabyAvatar
 import com.salazar.babytraker.features.inicio.presentation.mvi.InicioEffect
 import com.salazar.babytraker.features.inicio.presentation.mvi.InicioIntent
 import com.salazar.babytraker.features.inicio.presentation.viewmodel.InicioViewModel
@@ -51,7 +49,7 @@ fun InicioScreen(
         viewModel.effect.collect { effect ->
             when (effect) {
                 is InicioEffect.NavigateToAddBaby -> onNavigateToAddBaby()
-                is InicioEffect.ShowError -> { /* Implementar Snackbar */ }
+                is InicioEffect.ShowError -> { }
             }
         }
     }
@@ -73,7 +71,6 @@ fun InicioScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Cabecera
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -110,7 +107,7 @@ fun InicioScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(state.babies) { baby ->
+                items(state.babies, key = { it.id }) { baby ->
                     BabyAvatar(
                         baby = baby,
                         isSelected = state.selectedBaby?.id == baby.id,
@@ -121,7 +118,6 @@ fun InicioScreen(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Barra de Búsqueda
         OutlinedTextField(
             value = state.searchQuery,
             onValueChange = { viewModel.onIntent(InicioIntent.Search(it)) },
@@ -141,9 +137,8 @@ fun InicioScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Grid de Estadísticas
-        if (state.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (state.isLoading && state.diasConActividad.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color(0xFF4FC3F7))
             }
         } else if (state.diasConActividad.isEmpty()) {
@@ -153,11 +148,13 @@ fun InicioScreen(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                items(state.diasConActividad) { dia ->
+                items(state.diasConActividad, key = { it }) { dia ->
                     val resumen = state.resumenes[dia]
-                    StatCard(dia = dia, resumen = resumen)
+                    // Si el resumen no ha cargado aún para este día, pasamos null pero la UI no rompe
+                    StatCard(dia = dia, resumen = resumen, babyProfilePhoto = state.selectedBaby?.fotoUri)
                 }
             }
         }
@@ -165,40 +162,7 @@ fun InicioScreen(
 }
 
 @Composable
-fun BabyAvatar(
-    baby: Baby,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
-    ) {
-        AsyncImage(
-            model = baby.fotoUri ?: "https://via.placeholder.com/150",
-            contentDescription = baby.nombre,
-            modifier = Modifier
-                .size(60.dp)
-                .clip(CircleShape)
-                .border(
-                    width = if (isSelected) 2.dp else 0.dp,
-                    color = if (isSelected) Color(0xFF4FC3F7) else Color.Transparent,
-                    shape = CircleShape
-                ),
-            contentScale = ContentScale.Crop
-        )
-        Text(
-            text = baby.nombre,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) Color(0xFF4FC3F7) else Color.Gray,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-    }
-}
-
-@Composable
-fun StatCard(dia: Long, resumen: ResumenDia?) {
+fun StatCard(dia: Long, resumen: ResumenDia?, babyProfilePhoto: String?) {
     val dateStr = remember(dia) {
         SimpleDateFormat("d 'de' MMMM 'de' yyyy", Locale("es", "ES")).format(Date(dia))
     }
@@ -208,8 +172,9 @@ fun StatCard(dia: Long, resumen: ResumenDia?) {
             .fillMaxWidth()
             .clickable { /* Navegar al detalle */ }
     ) {
+        // IMAGEN: Prioridad -> Foto del Diario (capturada ese día) | Fallback -> Foto de Perfil del Bebé
         AsyncImage(
-            model = resumen?.fotoUri ?: "https://via.placeholder.com/150",
+            model = resumen?.fotoUri ?: babyProfilePhoto ?: "https://via.placeholder.com/150",
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()

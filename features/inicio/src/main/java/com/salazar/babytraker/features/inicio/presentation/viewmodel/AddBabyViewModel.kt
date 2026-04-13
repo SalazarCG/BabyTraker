@@ -1,8 +1,10 @@
 package com.salazar.babytraker.features.inicio.presentation.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.salazar.babytraker.core.domain.model.Baby
+import com.salazar.babytraker.core.utils.ImageStorageManager
 import com.salazar.babytraker.features.inicio.domain.usecase.SaveBabyUseCase
 import com.salazar.babytraker.features.inicio.presentation.mvi.AddBabyEffect
 import com.salazar.babytraker.features.inicio.presentation.mvi.AddBabyIntent
@@ -18,7 +20,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AddBabyViewModel @Inject constructor(
-    private val saveBabyUseCase: SaveBabyUseCase
+    private val saveBabyUseCase: SaveBabyUseCase,
+    private val imageStorageManager: ImageStorageManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AddBabyState())
@@ -48,11 +51,19 @@ class AddBabyViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _state.update { it.copy(isLoading = true) }
+                
+                // OPTIMIZACIÓN Y PERSISTENCIA DE FOTO
+                // Si hay un URI (temporal de cámara/galería), lo convertimos a archivo interno permanente
+                val permanentPhotoUri = _state.value.fotoUri?.let { tempUri ->
+                    imageStorageManager.saveImageToInternalStorage(Uri.parse(tempUri))
+                }
+
                 val baby = Baby(
                     nombre = nombre,
                     fechaNacimiento = fecha,
-                    fotoUri = _state.value.fotoUri
+                    fotoUri = permanentPhotoUri // Guardamos la ruta del archivo físico optimizado
                 )
+                
                 saveBabyUseCase(baby)
                 _state.update { it.copy(isLoading = false, isSaved = true) }
                 _effect.emit(AddBabyEffect.NavigateBack)

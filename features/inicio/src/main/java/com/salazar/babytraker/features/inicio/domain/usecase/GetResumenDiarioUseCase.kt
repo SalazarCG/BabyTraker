@@ -6,19 +6,16 @@ import com.salazar.babytraker.core.domain.model.TipoPanal
 import com.salazar.babytraker.features.inicio.domain.repository.InicioRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class GetResumenDiarioUseCase @Inject constructor(
     private val repository: InicioRepository,
-    private val babyDao: BabyDao // Acceso directo a diarios para simplificar
+    private val babyDao: BabyDao
 ) {
     operator fun invoke(fechaDia: Long, babyId: Long): Flow<Result<ResumenDia>> {
         val tomasFlow = repository.getTomasPorDia(fechaDia, babyId)
         val panalesFlow = repository.getPanalesPorDia(fechaDia, babyId)
-        val journalFlow = babyDao.getJournalsForBaby(babyId).map { journals ->
-            journals.find { it.fechaDia == fechaDia }
-        }
+        val journalFlow = babyDao.getJournalByDay(babyId, fechaDia)
 
         return combine(tomasFlow, panalesFlow, journalFlow) { tomasResult, panalesResult, journal ->
             val tomas = tomasResult.getOrNull() ?: emptyList()

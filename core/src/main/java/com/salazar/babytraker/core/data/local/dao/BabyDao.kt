@@ -7,35 +7,30 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface BabyDao {
 
-    // --- BEBES ---
     @Query("SELECT * FROM bebes")
     fun getAllBabies(): Flow<List<BabyEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBaby(baby: BabyEntity)
 
-    // --- TOMAS ---
     @Query("SELECT * FROM tomas WHERE fechaDia = :fechaDia AND babyId = :babyId ORDER BY timestamp DESC")
     fun getTomasPorDia(fechaDia: Long, babyId: Long): Flow<List<TomaEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertToma(toma: TomaEntity)
 
-    // --- PAÑALES ---
     @Query("SELECT * FROM panales WHERE fechaDia = :fechaDia AND babyId = :babyId ORDER BY timestamp DESC")
     fun getPanalesPorDia(fechaDia: Long, babyId: Long): Flow<List<PanalEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPanal(panal: PanalEntity)
 
-    // --- DIARIO / COMENTARIOS ---
-    @Query("SELECT * FROM diarios_diarios WHERE babyId = :babyId")
-    fun getJournalsForBaby(babyId: Long): Flow<List<DailyJournalEntity>>
+    @Query("SELECT * FROM diarios_diarios WHERE babyId = :babyId AND fechaDia = :fechaDia LIMIT 1")
+    fun getJournalByDay(babyId: Long, fechaDia: Long): Flow<DailyJournalEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertJournal(journal: DailyJournalEntity)
 
-    // --- ACTIVIDAD GLOBAL ---
     @Query("""
         SELECT DISTINCT fechaDia FROM (
             SELECT fechaDia FROM tomas WHERE babyId = :babyId

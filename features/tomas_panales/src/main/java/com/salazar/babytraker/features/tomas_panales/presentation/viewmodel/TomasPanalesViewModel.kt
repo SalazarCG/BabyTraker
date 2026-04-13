@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.salazar.babytraker.core.data.local.preferences.BabyPreferences
 import com.salazar.babytraker.core.domain.model.Panal
 import com.salazar.babytraker.core.domain.model.Toma
+import com.salazar.babytraker.core.domain.repository.BabyRepository
 import com.salazar.babytraker.features.tomas_panales.domain.usecase.SavePanalUseCase
 import com.salazar.babytraker.features.tomas_panales.domain.usecase.SaveTomaUseCase
 import com.salazar.babytraker.features.tomas_panales.presentation.mvi.TomasPanalesEffect
@@ -20,41 +21,70 @@ import javax.inject.Inject
 class TomasPanalesViewModel @Inject constructor(
     private val saveTomaUseCase: SaveTomaUseCase,
     private val savePanalUseCase: SavePanalUseCase,
-    private val babyPreferences: BabyPreferences
+    private val babyPreferences: BabyPreferences,
+    private val babyRepository: BabyRepository
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(TomasPanalesState())
-    val state = _state.asStateFlow()
+    private val _userIntent = MutableSharedFlow<TomasPanalesIntent>()
+    
+    private val _babiesFlow = babyRepository.getAllBabies()
+
+    val state: StateFlow<TomasPanalesState> = combine(
+        _babiesFlow,
+        babyPreferences.activeBabyIdFlow,
+        _userIntent.onStart { emit(TomasPanalesIntent.ResetState) }
+            .scan(TomasPanalesState()) { currentState, intent ->
+                reduce(currentState, intent)
+            }
+    ) { babiesResult, activeId, currentState ->
+        val babies = babiesResult.getOrNull() ?: emptyList()
+        val selected = babies.find { it.id == activeId }
+        
+        currentState.copy(
+            babies = babies,
+            selectedBaby = selected,
+            babyId = selected?.id
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = TomasPanalesState(isLoading = true)
+    )
 
     private val _effect = MutableSharedFlow<TomasPanalesEffect>()
     val effect = _effect.asSharedFlow()
 
-    init {
-        // Cargar el bebé activo al iniciar
-        val activeId = babyPreferences.activeBabyId
-        if (activeId != -1L) {
-            onIntent(TomasPanalesIntent.Init(activeId))
-        }
-    }
-
     fun onIntent(intent: TomasPanalesIntent) {
-        when (intent) {
-            is TomasPanalesIntent.Init -> _state.update { it.copy(babyId = intent.babyId) }
-            is TomasPanalesIntent.UpdateTipoAlimentacion -> _state.update { it.copy(selectedTipoAlimentacion = intent.tipo) }
-            is TomasPanalesIntent.UpdateTipoPanal -> _state.update { it.copy(selectedTipoPanal = intent.tipo) }
-            is TomasPanalesIntent.UpdateCantidad -> _state.update { it.copy(cantidadMl = intent.cantidad) }
-            is TomasPanalesIntent.UpdateNota -> _state.update { it.copy(nota = intent.nota) }
-            TomasPanalesIntent.SaveToma -> saveToma()
-            TomasPanalesIntent.SavePanal -> savePanal()
-            TomasPanalesIntent.ResetState -> _state.update { 
-                TomasPanalesState(babyId = _state.value.babyId) 
+        viewModelScope.launch {
+            when (intent) {
+                TomasPanalesIntent.SaveToma -> saveToma()
+                TomasPanalesIntent.SavePanal -> savePanal()
+                is TomasPanalesIntent.SelectBaby -> {
+                    babyRepository.setActiveBabyId(intent.baby.id)
+                }
+                else -> _userIntent.emit(intent)
             }
         }
     }
 
+    private fun reduce(currentState: TomasPanalesState, intent: TomasPanalesIntent): TomasPanalesState {
+        return when (intent) {
+            is TomasPanalesIntent.UpdateTipoAlimentacion -> currentState.copy(selectedTipoAlimentacion = intent.tipo)
+            is TomasPanalesIntent.UpdateTipoPanal -> currentState.copy(selectedTipoPanal = intent.tipo)
+            is TomasPanalesIntent.UpdateCantidad -> currentState.copy(cantidadMl = intent.cantidad)
+            is TomasPanalesIntent.UpdateNota -> currentState.copy(nota = intent.nota)
+            TomasPanalesIntent.ResetState -> currentState.copy(
+                cantidadMl = "",
+                nota = "",
+                isSaved = false
+            )
+            else -> currentState
+        }
+    }
+
     private fun saveToma() {
-        val babyId = _state.value.babyId
-        if (babyId == null) {
+        val babyId = babyPreferences.activeBabyId
+        if (babyId == -1L) {
             viewModelScope.launch { _effect.emit(TomasPanalesEffect.ShowError("Selecciona un bebé primero")) }
             return
         }
@@ -62,40 +92,44 @@ class TomasPanalesViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val now = System.currentTimeMillis()
+                val current = state.value
                 val toma = Toma(
                     babyId = babyId,
                     timestamp = now,
                     fechaDia = getNormalizedDate(now),
-                    tipo = _state.value.selectedTipoAlimentacion,
-                    cantidad = _state.value.cantidadMl.toIntOrNull(),
-                    nota = _state.value.nota
+                    tipo = current.selectedTipoAlimentacion,
+                    cantidad = current.cantidadMl.toIntOrNull(),
+                    nota = current.nota
                 )
                 saveTomaUseCase(toma)
                 _effect.emit(TomasPanalesEffect.ShowSuccess)
                 onIntent(TomasPanalesIntent.ResetState)
             } catch (e: Exception) {
-                _effect.emit(TomasPanalesEffect.ShowError("Error al guardar: ${e.message}"))
+                _effect.emit(TomasPanalesEffect.ShowError("Error: ${e.message}"))
             }
         }
     }
 
     private fun savePanal() {
-        val babyId = _state.value.babyId ?: return
+        val babyId = babyPreferences.activeBabyId
+        if (babyId == -1L) return
+
         viewModelScope.launch {
             try {
                 val now = System.currentTimeMillis()
+                val current = state.value
                 val panal = Panal(
                     babyId = babyId,
                     timestamp = now,
                     fechaDia = getNormalizedDate(now),
-                    tipo = _state.value.selectedTipoPanal,
-                    nota = _state.value.nota
+                    tipo = current.selectedTipoPanal,
+                    nota = current.nota
                 )
                 savePanalUseCase(panal)
                 _effect.emit(TomasPanalesEffect.ShowSuccess)
                 onIntent(TomasPanalesIntent.ResetState)
             } catch (e: Exception) {
-                _effect.emit(TomasPanalesEffect.ShowError("Error al guardar: ${e.message}"))
+                _effect.emit(TomasPanalesEffect.ShowError("Error: ${e.message}"))
             }
         }
     }

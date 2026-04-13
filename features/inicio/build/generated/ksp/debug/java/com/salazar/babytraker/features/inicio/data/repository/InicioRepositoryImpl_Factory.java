@@ -1,6 +1,7 @@
 package com.salazar.babytraker.features.inicio.data.repository;
 
 import com.salazar.babytraker.core.data.local.dao.BabyDao;
+import com.salazar.babytraker.core.data.local.preferences.BabyPreferences;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -26,20 +27,25 @@ import javax.inject.Provider;
 public final class InicioRepositoryImpl_Factory implements Factory<InicioRepositoryImpl> {
   private final Provider<BabyDao> babyDaoProvider;
 
-  public InicioRepositoryImpl_Factory(Provider<BabyDao> babyDaoProvider) {
+  private final Provider<BabyPreferences> babyPreferencesProvider;
+
+  public InicioRepositoryImpl_Factory(Provider<BabyDao> babyDaoProvider,
+      Provider<BabyPreferences> babyPreferencesProvider) {
     this.babyDaoProvider = babyDaoProvider;
+    this.babyPreferencesProvider = babyPreferencesProvider;
   }
 
   @Override
   public InicioRepositoryImpl get() {
-    return newInstance(babyDaoProvider.get());
+    return newInstance(babyDaoProvider.get(), babyPreferencesProvider.get());
   }
 
-  public static InicioRepositoryImpl_Factory create(Provider<BabyDao> babyDaoProvider) {
-    return new InicioRepositoryImpl_Factory(babyDaoProvider);
+  public static InicioRepositoryImpl_Factory create(Provider<BabyDao> babyDaoProvider,
+      Provider<BabyPreferences> babyPreferencesProvider) {
+    return new InicioRepositoryImpl_Factory(babyDaoProvider, babyPreferencesProvider);
   }
 
-  public static InicioRepositoryImpl newInstance(BabyDao babyDao) {
-    return new InicioRepositoryImpl(babyDao);
+  public static InicioRepositoryImpl newInstance(BabyDao babyDao, BabyPreferences babyPreferences) {
+    return new InicioRepositoryImpl(babyDao, babyPreferences);
   }
 }
