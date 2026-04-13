@@ -22,7 +22,9 @@ object DatabaseModule {
             context,
             BabyTrakerDatabase::class.java,
             "babytraker_db"
-        ).build()
+        )
+        .fallbackToDestructiveMigration() // Evita crashes al cambiar el esquema durante el desarrollo
+        .build()
     }
 
     @Provides

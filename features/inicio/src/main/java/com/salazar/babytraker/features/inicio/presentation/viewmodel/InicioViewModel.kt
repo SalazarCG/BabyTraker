@@ -46,9 +46,12 @@ class InicioViewModel @Inject constructor(
             repository.getAllBabies().collect { result ->
                 result.onSuccess { babies ->
                     _state.update { it.copy(babies = babies, isLoading = false) }
-                    if (babies.isNotEmpty() && _state.value.selectedBaby == null) {
-                        selectBaby(babies.first())
-                    }
+                    
+                    // Recuperar el último bebé seleccionado de las preferencias
+                    val activeBabyId = repository.getActiveBabyId()
+                    val activeBaby = babies.find { it.id == activeBabyId } ?: babies.firstOrNull()
+                    
+                    activeBaby?.let { selectBaby(it) }
                 }.onFailure { error ->
                     _state.update { it.copy(isLoading = false, error = error.message) }
                 }
@@ -57,6 +60,7 @@ class InicioViewModel @Inject constructor(
     }
 
     private fun selectBaby(baby: Baby) {
+        repository.setActiveBabyId(baby.id)
         _state.update { it.copy(selectedBaby = baby, resumenes = emptyMap(), diasConActividad = emptyList()) }
         loadDashboardData(baby.id)
     }

@@ -1,6 +1,7 @@
 package com.salazar.babytraker.features.inicio.data.repository
 
 import com.salazar.babytraker.core.data.local.dao.BabyDao
+import com.salazar.babytraker.core.data.local.preferences.BabyPreferences
 import com.salazar.babytraker.core.data.mapper.toDomain
 import com.salazar.babytraker.core.data.mapper.toEntity
 import com.salazar.babytraker.core.domain.model.Baby
@@ -13,7 +14,8 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class InicioRepositoryImpl @Inject constructor(
-    private val babyDao: BabyDao
+    private val babyDao: BabyDao,
+    private val babyPreferences: BabyPreferences
 ) : InicioRepository {
 
     override fun getAllBabies(): Flow<Result<List<Baby>>> =
@@ -38,5 +40,11 @@ class InicioRepositoryImpl @Inject constructor(
 
     override suspend fun addBaby(baby: Baby) {
         babyDao.insertBaby(baby.toEntity())
+    }
+
+    override fun getActiveBabyId(): Long = babyPreferences.activeBabyId
+
+    override fun setActiveBabyId(id: Long) {
+        babyPreferences.activeBabyId = id
     }
 }

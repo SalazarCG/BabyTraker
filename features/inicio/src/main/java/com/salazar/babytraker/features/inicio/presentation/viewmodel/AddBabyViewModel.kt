@@ -46,15 +46,20 @@ class AddBabyViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            val baby = Baby(
-                nombre = nombre,
-                fechaNacimiento = fecha,
-                fotoUri = _state.value.fotoUri
-            )
-            saveBabyUseCase(baby)
-            _state.update { it.copy(isLoading = false, isSaved = true) }
-            _effect.emit(AddBabyEffect.NavigateBack)
+            try {
+                _state.update { it.copy(isLoading = true) }
+                val baby = Baby(
+                    nombre = nombre,
+                    fechaNacimiento = fecha,
+                    fotoUri = _state.value.fotoUri
+                )
+                saveBabyUseCase(baby)
+                _state.update { it.copy(isLoading = false, isSaved = true) }
+                _effect.emit(AddBabyEffect.NavigateBack)
+            } catch (e: Exception) {
+                _state.update { it.copy(isLoading = false) }
+                _effect.emit(AddBabyEffect.ShowError("Error al guardar: ${e.message}"))
+            }
         }
     }
 }

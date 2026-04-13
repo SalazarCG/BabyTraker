@@ -11,4 +11,6 @@ interface InicioRepository {
     fun getTomasPorDia(fechaDia: Long, babyId: Long): Flow<Result<List<Toma>>>
     fun getPanalesPorDia(fechaDia: Long, babyId: Long): Flow<Result<List<Panal>>>
     suspend fun addBaby(baby: Baby)
+    fun getActiveBabyId(): Long
+    fun setActiveBabyId(id: Long)
 }

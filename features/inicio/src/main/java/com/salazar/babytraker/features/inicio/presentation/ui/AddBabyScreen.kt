@@ -1,8 +1,9 @@
 package com.salazar.babytraker.features.inicio.presentation.ui
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Environment
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -11,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,6 +31,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,10 +54,9 @@ fun AddBabyScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showPhotoOptions by remember { mutableStateOf(false) }
     
-    // URI temporal para la cámara
-    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    // Persistimos el URI temporal para que no se pierda si la cámara rota la pantalla
+    var tempCameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
-    // Launcher para Galería
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
@@ -61,15 +64,26 @@ fun AddBabyScreen(
         }
     )
 
-    // Launcher para Cámara
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
-            if (success) {
-                tempCameraUri?.let { viewModel.onIntent(AddBabyIntent.UpdateFotoUri(it.toString())) }
+            if (success && tempCameraUri != null) {
+                viewModel.onIntent(AddBabyIntent.UpdateFotoUri(tempCameraUri.toString()))
             }
         }
     )
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val uri = createTempPictureUri(context)
+            tempCameraUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            Toast.makeText(context, "Se requiere permiso de cámara", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.effect.collect { effect ->
@@ -107,9 +121,7 @@ fun AddBabyScreen(
     }
 
     if (showPhotoOptions) {
-        ModalBottomSheet(
-            onDismissRequest = { showPhotoOptions = false }
-        ) {
+        ModalBottomSheet(onDismissRequest = { showPhotoOptions = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -117,26 +129,27 @@ fun AddBabyScreen(
                     .padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("Seleccionar Foto", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                
+                Text("Foto del Bebé", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 ListItem(
-                    headlineContent = { Text("Hacer Foto con Cámara") },
-                    leadingContent = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                    headlineContent = { Text("Cámara") },
+                    leadingContent = { Icon(Icons.Default.CameraAlt, null) },
                     modifier = Modifier.clickable {
-                        val uri = createTempPictureUri(context)
-                        tempCameraUri = uri
-                        cameraLauncher.launch(uri)
                         showPhotoOptions = false
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                            val uri = createTempPictureUri(context)
+                            tempCameraUri = uri
+                            cameraLauncher.launch(uri)
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.CAMERA)
+                        }
                     }
                 )
                 ListItem(
-                    headlineContent = { Text("Elegir de la Galería") },
-                    leadingContent = { Icon(Icons.Default.PhotoLibrary, contentDescription = null) },
+                    headlineContent = { Text("Galería") },
+                    leadingContent = { Icon(Icons.Default.PhotoLibrary, null) },
                     modifier = Modifier.clickable {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
                         showPhotoOptions = false
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }
                 )
             }
@@ -145,22 +158,13 @@ fun AddBabyScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Añadir Bebé", fontWeight = FontWeight.Bold) },
+            CenterAlignedTopAppBar(
+                title = { Text("Nuevo Perfil", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Atrás")
                     }
                 }
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { viewModel.onIntent(AddBabyIntent.SaveBaby) },
-                icon = { Icon(Icons.Default.Save, contentDescription = null) },
-                text = { Text("Guardar") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
             )
         }
     ) { padding ->
@@ -168,14 +172,14 @@ fun AddBabyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Selector de Foto (Avatar)
+            // Avatar Selector
             Box(
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(140.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { showPhotoOptions = true },
@@ -184,26 +188,25 @@ fun AddBabyScreen(
                 if (state.fotoUri != null) {
                     AsyncImage(
                         model = state.fotoUri,
-                        contentDescription = "Foto del bebé",
+                        contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 } else {
-                    Icon(
-                        imageVector = Icons.Default.AddAPhoto,
-                        contentDescription = "Añadir foto",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.AddAPhoto, null, modifier = Modifier.size(32.dp))
+                        Text("Añadir Foto", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
 
             OutlinedTextField(
                 value = state.nombre,
                 onValueChange = { viewModel.onIntent(AddBabyIntent.UpdateNombre(it)) },
-                label = { Text("Nombre del Bebé") },
+                label = { Text("Nombre") },
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.ChildCare, contentDescription = null) },
-                singleLine = true
+                leadingIcon = { Icon(Icons.Default.ChildCare, null) },
+                shape = RoundedCornerShape(12.dp)
             )
 
             val dateText = state.fechaNacimiento?.let {
@@ -212,50 +215,46 @@ fun AddBabyScreen(
 
             OutlinedCard(
                 onClick = { showDatePicker = true },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth(),
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(
-                            text = "Fecha de Nacimiento",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = dateText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Text("Fecha de Nacimiento", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(dateText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                     }
-                    Icon(Icons.Default.CalendarToday, contentDescription = null)
+                    Icon(Icons.Default.CalendarToday, null)
                 }
             }
 
+            Spacer(Modifier.weight(1f))
+
             if (state.isLoading) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            Button(
+                onClick = { viewModel.onIntent(AddBabyIntent.SaveBaby) },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                enabled = !state.isLoading
+            ) {
+                Icon(Icons.Default.Save, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Guardar Bebé", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
-/**
- * Helper para crear un URI seguro para la cámara usando FileProvider
- */
 private fun createTempPictureUri(context: Context): Uri {
-    val tempFile = File.createTempFile(
-        "baby_capture_", ".jpg", 
-        context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-    ).apply {
+    val tempFile = File(context.cacheDir, "temp_baby_${System.currentTimeMillis()}.jpg").apply {
         createNewFile()
-        deleteOnExit()
     }
-
     return FileProvider.getUriForFile(
         context,
         "${context.packageName}.fileprovider",
