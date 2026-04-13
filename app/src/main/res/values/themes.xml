@@ -5,7 +5,7 @@
 
     <!-- Splash Screen Theme -->
     <style name="Theme.BabyTraker.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/baby_traker</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/babytraker</item>
         <item name="windowSplashScreenBackground">@android:color/white</item>
         <item name="postSplashScreenTheme">@style/Theme.BabyTraker</item>
     </style>

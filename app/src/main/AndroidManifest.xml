@@ -7,9 +7,9 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/baby_traker"
+        android:icon="@mipmap/babytraker"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/baby_traker"
+        android:roundIcon="@mipmap/babytraker_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BabyTraker.Splash">
         <activity

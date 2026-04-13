@@ -2,6 +2,8 @@ package com.salazar.babytraker.core.di
 
 import android.content.Context
 import androidx.room.Room
+import com.salazar.babytraker.core.data.local.BabyTrakerDatabase
+import com.salazar.babytraker.core.data.local.dao.BabyDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,7 +15,6 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    /*
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): BabyTrakerDatabase {
@@ -23,5 +24,10 @@ object DatabaseModule {
             "babytraker_db"
         ).build()
     }
-    */
+
+    @Provides
+    @Singleton
+    fun provideBabyDao(database: BabyTrakerDatabase): BabyDao {
+        return database.babyDao()
+    }
 }

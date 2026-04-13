@@ -1,8 +1,31 @@
 package com.salazar.babytraker.features.inicio.data.repository
 
+import com.salazar.babytraker.core.data.local.dao.BabyDao
+import com.salazar.babytraker.core.data.mapper.toDomain
+import com.salazar.babytraker.core.domain.model.Panal
+import com.salazar.babytraker.core.domain.model.Toma
 import com.salazar.babytraker.features.inicio.domain.repository.InicioRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
-class InicioRepositoryImpl @Inject constructor() : InicioRepository {
-    // Implementación Offline-First con Room
+class InicioRepositoryImpl @Inject constructor(
+    private val babyDao: BabyDao
+) : InicioRepository {
+
+    override fun getDiasConActividad(): Flow<Result<List<Long>>> =
+        babyDao.getDiasConActividad()
+            .map { Result.success(it) }
+            .catch { emit(Result.failure(it)) }
+
+    override fun getTomasPorDia(fechaDia: Long): Flow<Result<List<Toma>>> =
+        babyDao.getTomasPorDia(fechaDia)
+            .map { entities -> Result.success(entities.map { it.toDomain() }) }
+            .catch { emit(Result.failure(it)) }
+
+    override fun getPanalesPorDia(fechaDia: Long): Flow<Result<List<Panal>>> =
+        babyDao.getPanalesPorDia(fechaDia)
+            .map { entities -> Result.success(entities.map { it.toDomain() }) }
+            .catch { emit(Result.failure(it)) }
 }

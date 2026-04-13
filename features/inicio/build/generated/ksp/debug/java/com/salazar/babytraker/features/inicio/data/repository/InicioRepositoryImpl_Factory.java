@@ -1,10 +1,12 @@
 package com.salazar.babytraker.features.inicio.data.repository;
 
+import com.salazar.babytraker.core.data.local.dao.BabyDao;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
 import dagger.internal.ScopeMetadata;
 import javax.annotation.processing.Generated;
+import javax.inject.Provider;
 
 @ScopeMetadata
 @QualifierMetadata
@@ -22,20 +24,22 @@ import javax.annotation.processing.Generated;
     "deprecation"
 })
 public final class InicioRepositoryImpl_Factory implements Factory<InicioRepositoryImpl> {
+  private final Provider<BabyDao> babyDaoProvider;
+
+  public InicioRepositoryImpl_Factory(Provider<BabyDao> babyDaoProvider) {
+    this.babyDaoProvider = babyDaoProvider;
+  }
+
   @Override
   public InicioRepositoryImpl get() {
-    return newInstance();
+    return newInstance(babyDaoProvider.get());
   }
 
-  public static InicioRepositoryImpl_Factory create() {
-    return InstanceHolder.INSTANCE;
+  public static InicioRepositoryImpl_Factory create(Provider<BabyDao> babyDaoProvider) {
+    return new InicioRepositoryImpl_Factory(babyDaoProvider);
   }
 
-  public static InicioRepositoryImpl newInstance() {
-    return new InicioRepositoryImpl();
-  }
-
-  private static final class InstanceHolder {
-    private static final InicioRepositoryImpl_Factory INSTANCE = new InicioRepositoryImpl_Factory();
+  public static InicioRepositoryImpl newInstance(BabyDao babyDao) {
+    return new InicioRepositoryImpl(babyDao);
   }
 }
