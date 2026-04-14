@@ -5,40 +5,46 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.ChildCare
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.salazar.babytraker.core.data.local.preferences.BabyPreferences
 import com.salazar.babytraker.features.inicio.presentation.mvi.AddBabyEffect
 import com.salazar.babytraker.features.inicio.presentation.mvi.AddBabyIntent
 import com.salazar.babytraker.features.inicio.presentation.viewmodel.AddBabyViewModel
+import kotlinx.coroutines.delay
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -47,6 +53,7 @@ import java.util.*
 @Composable
 fun AddBabyScreen(
     viewModel: AddBabyViewModel = hiltViewModel(),
+    babyPreferences: BabyPreferences, // Pasado desde el grafo de navegación o inyectado
     onNavigateBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -54,7 +61,18 @@ fun AddBabyScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showPhotoOptions by remember { mutableStateOf(false) }
     
-    // Persistimos el URI temporal para que no se pierda si la cámara rota la pantalla
+    // Solo mostramos si no se ha visto antes
+    var showWelcomeMessage by remember { 
+        mutableStateOf(!babyPreferences.hasSeenWelcomeMessage) 
+    }
+    
+    val blurIntensity by animateFloatAsState(
+        targetValue = if (showWelcomeMessage) 10f else 0f,
+        animationSpec = tween(800),
+        label = "blurAnimation"
+    )
+
+    // Persistimos el URI temporal
     var tempCameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -94,6 +112,20 @@ fun AddBabyScreen(
                 }
             }
         }
+    }
+
+    // Efecto para ocultar el mensaje tras 8 segundos y marcar como visto
+    LaunchedEffect(showWelcomeMessage) {
+        if (showWelcomeMessage) {
+            delay(8000)
+            showWelcomeMessage = false
+            babyPreferences.hasSeenWelcomeMessage = true
+        }
+    }
+
+    // Bloquear el botón atrás del sistema mientras se muestra el mensaje
+    if (showWelcomeMessage) {
+        BackHandler(enabled = true) { /* No hace nada, bloquea el atrás */ }
     }
 
     if (showDatePicker) {
@@ -156,96 +188,170 @@ fun AddBabyScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Nuevo Perfil", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Atrás")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+                .blur(blurIntensity.dp),
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = { Text("Nuevo Perfil", fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = onNavigateBack,
+                            enabled = !showWelcomeMessage // Bloquear navegación atrás
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, "Atrás")
+                        }
+                    }
+                )
+            }
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
+                // Avatar Selector
+                Box(
+                    modifier = Modifier
+                        .size(140.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable(enabled = !showWelcomeMessage) { showPhotoOptions = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (state.fotoUri != null) {
+                        AsyncImage(
+                            model = state.fotoUri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.AddAPhoto, null, modifier = Modifier.size(32.dp))
+                            Text("Añadir Foto", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = state.nombre,
+                    onValueChange = { viewModel.onIntent(AddBabyIntent.UpdateNombre(it)) },
+                    label = { Text("Nombre") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !showWelcomeMessage,
+                    leadingIcon = { Icon(Icons.Default.ChildCare, null) },
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                val dateText = state.fechaNacimiento?.let {
+                    SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(it))
+                } ?: "Seleccionar fecha"
+
+                OutlinedCard(
+                    onClick = { if (!showWelcomeMessage) showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !showWelcomeMessage,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Fecha de Nacimiento", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Text(dateText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        }
+                        Icon(Icons.Default.CalendarToday, null)
+                    }
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                if (state.isLoading) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+
+                Button(
+                    onClick = { viewModel.onIntent(AddBabyIntent.SaveBaby) },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = !state.isLoading && !showWelcomeMessage
+                ) {
+                    Icon(Icons.Default.Save, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Guardar Bebé", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        // CAPA DE BLOQUEO Y DIFUMINADO
+        AnimatedVisibility(
+            visible = showWelcomeMessage,
+            enter = fadeIn(),
+            exit = fadeOut()
         ) {
-            // Avatar Selector
             Box(
                 modifier = Modifier
-                    .size(140.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { showPhotoOptions = true },
-                contentAlignment = Alignment.Center
-            ) {
-                if (state.fotoUri != null) {
-                    AsyncImage(
-                        model = state.fotoUri,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.2f))
+                    // Este clickable consume los eventos y bloquea todo lo de abajo
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} 
                     )
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.AddAPhoto, null, modifier = Modifier.size(32.dp))
-                        Text("Añadir Foto", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
-
-            OutlinedTextField(
-                value = state.nombre,
-                onValueChange = { viewModel.onIntent(AddBabyIntent.UpdateNombre(it)) },
-                label = { Text("Nombre") },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.ChildCare, null) },
-                shape = RoundedCornerShape(12.dp)
             )
+        }
 
-            val dateText = state.fechaNacimiento?.let {
-                SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(it))
-            } ?: "Seleccionar fecha"
-
-            OutlinedCard(
-                onClick = { showDatePicker = true },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+        // MENSAJE DE BIENVENIDA
+        AnimatedVisibility(
+            visible = showWelcomeMessage,
+            enter = fadeIn(animationSpec = tween(500)) + scaleIn(initialScale = 0.8f),
+            exit = fadeOut(animationSpec = tween(500)) + scaleOut(targetScale = 0.8f),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .padding(32.dp)
+                    .wrapContentSize(),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 12.dp,
+                shadowElevation = 8.dp
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column {
-                        Text("Fecha de Nacimiento", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        Text(dateText, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                    }
-                    Icon(Icons.Default.CalendarToday, null)
+                    Icon(
+                        imageVector = Icons.Default.ChildFriendly,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = "¡Hola! 👋\nAquí podrás añadir a tu bebé o niño/a",
+                        style = MaterialTheme.typography.titleMedium,
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 24.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "Crea un perfil para empezar a registrar su crecimiento y momentos especiales.",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
                 }
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            if (state.isLoading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
-            Button(
-                onClick = { viewModel.onIntent(AddBabyIntent.SaveBaby) },
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                enabled = !state.isLoading
-            ) {
-                Icon(Icons.Default.Save, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Guardar Bebé", fontWeight = FontWeight.Bold)
             }
         }
     }

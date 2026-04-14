@@ -13,6 +13,12 @@ interface BabyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBaby(baby: BabyEntity)
 
+    @Update
+    suspend fun updateBaby(baby: BabyEntity)
+
+    @Delete
+    suspend fun deleteBaby(baby: BabyEntity)
+
     @Query("SELECT * FROM tomas WHERE fechaDia = :fechaDia AND babyId = :babyId ORDER BY timestamp DESC")
     fun getTomasPorDia(fechaDia: Long, babyId: Long): Flow<List<TomaEntity>>
 
@@ -45,4 +51,21 @@ interface BabyDao {
 
     @Delete
     suspend fun deletePanal(panal: PanalEntity)
+    
+    @Query("DELETE FROM tomas WHERE babyId = :babyId")
+    suspend fun deleteTomasByBabyId(babyId: Long)
+
+    @Query("DELETE FROM panales WHERE babyId = :babyId")
+    suspend fun deletePanalesByBabyId(babyId: Long)
+
+    @Query("DELETE FROM diarios_diarios WHERE babyId = :babyId")
+    suspend fun deleteJournalsByBabyId(babyId: Long)
+
+    @Transaction
+    suspend fun deleteBabyAndData(baby: BabyEntity) {
+        deleteTomasByBabyId(baby.id)
+        deletePanalesByBabyId(baby.id)
+        deleteJournalsByBabyId(baby.id)
+        deleteBaby(baby)
+    }
 }

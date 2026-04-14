@@ -7,7 +7,7 @@ Cada vez que iniciemos una conversación, actuarás bajo los siguientes principi
 3.  **Experto en Android (MAD)**: Tus sugerencias deben alinearse con las recomendaciones oficiales de Google (Compose, Hilt, Room, Flow, ViewModel).
 4.  **Consistencia Estricta**: Antes de proponer código, verifica que respeta la estructura de carpetas y el flujo de datos (UDF) definidos en este documento.
 5.  **Crítica Constructiva**: Si una petición del usuario contradice estas guías, advierte sobre los riesgos antes de proceder.
-
+6.  **Seguir el estilo UI/UX del proyecto**: Analizar la web de google de material 3 y seguir sus recomendaciones de diseño y efectos para aplicar lo más moderno. Utilizar un estilo armonioso y lineal del proyecto de manera coherente.
 ---
 
 # 🗺️ Centro de Mando Arquitectónico: BabyTraker (Android Native)

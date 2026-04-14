@@ -26,8 +26,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.salazar.babytraker.features.inicio.presentation.ui.AddBabyScreen
-import com.salazar.babytraker.features.inicio.presentation.ui.InicioScreen
+import androidx.navigation.toRoute
+import com.salazar.babytraker.core.data.local.preferences.BabyPreferences
+import com.salazar.babytraker.features.inicio.presentation.ui.*
 import com.salazar.babytraker.features.medicos.presentation.ui.MedicosScreen
 import com.salazar.babytraker.features.tomas_panales.presentation.ui.TomasPanalesScreen
 import com.salazar.babytraker.navigation.Screen
@@ -35,9 +36,14 @@ import com.salazar.babytraker.navigation.bottomNavigationItems
 import com.salazar.babytraker.ui.theme.BabyTrakerTheme
 import com.salazar.babytraker.ui.theme.BlueSkyPrimary
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var babyPreferences: BabyPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -72,6 +78,12 @@ class MainActivity : ComponentActivity() {
                             InicioScreen(
                                 onNavigateToAddBaby = {
                                     navController.navigate(Screen.AddBaby)
+                                },
+                                onNavigateToDetalle = { fecha, babyId ->
+                                    navController.navigate(Screen.DetalleDia(fecha, babyId))
+                                },
+                                onNavigateToOpciones = {
+                                    navController.navigate(Screen.Opciones)
                                 }
                             ) 
                         }
@@ -79,8 +91,39 @@ class MainActivity : ComponentActivity() {
                         composable<Screen.Medicos> { MedicosScreen() }
                         composable<Screen.AddBaby> { 
                             AddBabyScreen(
+                                babyPreferences = babyPreferences,
                                 onNavigateBack = {
                                     navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable<Screen.DetalleDia> { backStackEntry ->
+                            val detalle = backStackEntry.toRoute<Screen.DetalleDia>()
+                            DetalleDiaScreen(
+                                fechaDia = detalle.fechaDia,
+                                babyId = detalle.babyId,
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable<Screen.Opciones> {
+                            OpcionesScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                onNavigateToGestionBebes = {
+                                    navController.navigate(Screen.GestionBebes)
+                                }
+                            )
+                        }
+                        composable<Screen.GestionBebes> {
+                            GestionBebesScreen(
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                onNavigateToAddBaby = {
+                                    navController.navigate(Screen.AddBaby)
                                 }
                             )
                         }

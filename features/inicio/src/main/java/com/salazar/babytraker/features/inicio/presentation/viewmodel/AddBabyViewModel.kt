@@ -34,7 +34,19 @@ class AddBabyViewModel @Inject constructor(
         when (intent) {
             is AddBabyIntent.UpdateNombre -> _state.update { it.copy(nombre = intent.nombre) }
             is AddBabyIntent.UpdateFechaNacimiento -> _state.update { it.copy(fechaNacimiento = intent.fecha) }
-            is AddBabyIntent.UpdateFotoUri -> _state.update { it.copy(fotoUri = intent.uri) }
+            is AddBabyIntent.UpdateFotoUri -> {
+                viewModelScope.launch {
+                    _state.update { it.copy(isLoading = true) }
+                    // PERSISTENCIA INMEDIATA: Al seleccionar la foto, la guardamos permanentemente
+                    val permanentUri = imageStorageManager.saveImageToInternalStorage(Uri.parse(intent.uri))
+                    if (permanentUri != null) {
+                        _state.update { it.copy(fotoUri = permanentUri, isLoading = false) }
+                    } else {
+                        _state.update { it.copy(isLoading = false) }
+                        _effect.emit(AddBabyEffect.ShowError("Error al procesar la imagen"))
+                    }
+                }
+            }
             AddBabyIntent.SaveBaby -> saveBaby()
         }
     }
@@ -52,16 +64,10 @@ class AddBabyViewModel @Inject constructor(
             try {
                 _state.update { it.copy(isLoading = true) }
                 
-                // OPTIMIZACIÓN Y PERSISTENCIA DE FOTO
-                // Si hay un URI (temporal de cámara/galería), lo convertimos a archivo interno permanente
-                val permanentPhotoUri = _state.value.fotoUri?.let { tempUri ->
-                    imageStorageManager.saveImageToInternalStorage(Uri.parse(tempUri))
-                }
-
                 val baby = Baby(
                     nombre = nombre,
                     fechaNacimiento = fecha,
-                    fotoUri = permanentPhotoUri // Guardamos la ruta del archivo físico optimizado
+                    fotoUri = _state.value.fotoUri // Ya es el URI permanente guardado en onIntent
                 )
                 
                 saveBabyUseCase(baby)

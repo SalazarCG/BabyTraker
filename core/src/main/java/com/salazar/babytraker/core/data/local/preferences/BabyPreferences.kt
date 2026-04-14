@@ -24,4 +24,8 @@ class BabyPreferences @Inject constructor(
             prefs.edit().putLong("active_baby_id", value).apply()
             _activeBabyIdFlow.value = value
         }
+
+    var hasSeenWelcomeMessage: Boolean
+        get() = prefs.getBoolean("has_seen_welcome", false)
+        set(value) = prefs.edit().putBoolean("has_seen_welcome", value).apply()
 }

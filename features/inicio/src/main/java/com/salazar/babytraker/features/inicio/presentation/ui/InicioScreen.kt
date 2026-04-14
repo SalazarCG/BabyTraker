@@ -11,7 +11,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -41,7 +42,9 @@ import java.util.*
 @Composable
 fun InicioScreen(
     viewModel: InicioViewModel = hiltViewModel(),
-    onNavigateToAddBaby: () -> Unit
+    onNavigateToAddBaby: () -> Unit,
+    onNavigateToDetalle: (Long, Long) -> Unit,
+    onNavigateToOpciones: () -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
@@ -62,14 +65,21 @@ fun InicioScreen(
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         
-        Icon(
-            imageVector = Icons.Default.Menu,
-            contentDescription = "Menú",
-            modifier = Modifier.size(24.dp),
-            tint = Color.LightGray
-        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            IconButton(
+                onClick = onNavigateToOpciones,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Opciones",
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Gray
+                )
+            }
+        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -153,8 +163,16 @@ fun InicioScreen(
             ) {
                 items(state.diasConActividad, key = { it }) { dia ->
                     val resumen = state.resumenes[dia]
-                    // Si el resumen no ha cargado aún para este día, pasamos null pero la UI no rompe
-                    StatCard(dia = dia, resumen = resumen, babyProfilePhoto = state.selectedBaby?.fotoUri)
+                    StatCard(
+                        dia = dia, 
+                        resumen = resumen, 
+                        babyProfilePhoto = state.selectedBaby?.fotoUri,
+                        onClick = { 
+                            state.selectedBaby?.id?.let { babyId ->
+                                onNavigateToDetalle(dia, babyId)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -162,36 +180,69 @@ fun InicioScreen(
 }
 
 @Composable
-fun StatCard(dia: Long, resumen: ResumenDia?, babyProfilePhoto: String?) {
-    val dateStr = remember(dia) {
-        SimpleDateFormat("d 'de' MMMM 'de' yyyy", Locale("es", "ES")).format(Date(dia))
+fun StatCard(
+    dia: Long, 
+    resumen: ResumenDia?, 
+    babyProfilePhoto: String?,
+    onClick: () -> Unit
+) {
+    val isToday = remember(dia) {
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        dia == today
+    }
+
+    val dateStr = remember(dia, isToday) {
+        val format = SimpleDateFormat("d 'de' MMMM", Locale("es", "ES")).format(Date(dia))
+        if (isToday) "$format (Hoy)" else format
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Navegar al detalle */ }
+            .clickable { onClick() }
     ) {
-        // IMAGEN: Prioridad -> Foto del Diario (capturada ese día) | Fallback -> Foto de Perfil del Bebé
-        AsyncImage(
-            model = resumen?.fotoUri ?: babyProfilePhoto ?: "https://via.placeholder.com/150",
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-                .clip(RoundedCornerShape(16.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Box {
+            AsyncImage(
+                model = resumen?.fotoUri ?: babyProfilePhoto ?: "https://via.placeholder.com/150",
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop
+            )
+            
+            // Indicador de comentarios
+            if (!resumen?.comentario.isNullOrBlank()) {
+                Surface(
+                    color = Color.White.copy(alpha = 0.8f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(8.dp).align(Alignment.TopEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Comment,
+                        contentDescription = null,
+                        tint = Color(0xFF4FC3F7),
+                        modifier = Modifier.padding(4.dp).size(16.dp)
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         val totalPanales = (resumen?.totalPipis ?: 0) + (resumen?.totalCacas ?: 0) + (resumen?.totalMixtos ?: 0)
         Text(
-            text = "TOMAS: ${resumen?.totalTomas ?: 0},00 | PAÑALES: $totalPanales,00",
+            text = "TOMAS: ${resumen?.totalTomas ?: 0} | PAÑALES: $totalPanales",
             style = MaterialTheme.typography.labelSmall,
-            color = Color(0xFFB3E5FC),
-            fontWeight = FontWeight.Bold,
-            fontSize = 10.sp
+            color = Color(0xFF0288D1), // Azul más fuerte para resaltar
+            fontWeight = FontWeight.ExtraBold, // Bold más fuerte
+            fontSize = 11.sp
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -203,12 +254,16 @@ fun StatCard(dia: Long, resumen: ResumenDia?, babyProfilePhoto: String?) {
             color = Color.Black
         )
 
-        Text(
-            text = resumen?.comentario ?: "Sin comentarios hoy",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            maxLines = 2
-        )
+        val hayComentarios = !resumen?.comentario.isNullOrBlank()
+        if (hayComentarios) {
+            Text(
+                text = "Existen comentarios",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF4FC3F7),
+                fontWeight = FontWeight.Bold,
+                maxLines = 2
+            )
+        }
     }
 }
 

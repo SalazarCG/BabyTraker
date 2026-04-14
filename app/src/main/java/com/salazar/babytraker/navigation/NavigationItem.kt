@@ -17,6 +17,12 @@ sealed interface Screen {
     data object Medicos : Screen
     @Serializable
     data object AddBaby : Screen
+    @Serializable
+    data class DetalleDia(val fechaDia: Long, val babyId: Long) : Screen
+    @Serializable
+    data object Opciones : Screen
+    @Serializable
+    data object GestionBebes : Screen
 }
 
 data class NavigationItem(

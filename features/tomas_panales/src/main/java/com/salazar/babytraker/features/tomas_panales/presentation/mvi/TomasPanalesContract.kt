@@ -12,7 +12,11 @@ data class TomasPanalesState(
     val selectedTipoAlimentacion: TipoAlimentacion = TipoAlimentacion.PECHO,
     val selectedTipoPanal: TipoPanal = TipoPanal.PIPI,
     val cantidadMl: String = "",
-    val nota: String = "",
+    val notaAlimentacion: String = "",
+    val notaPanal: String = "",
+    val horaToma: Long? = null, // null significa "Ahora"
+    val horaPanal: Long? = null, // null significa "Ahora"
+    val fotoDelDia: String? = null,
     val isSaved: Boolean = false
 )
 
@@ -22,7 +26,11 @@ sealed interface TomasPanalesIntent {
     data class UpdateTipoAlimentacion(val tipo: TipoAlimentacion) : TomasPanalesIntent
     data class UpdateTipoPanal(val tipo: TipoPanal) : TomasPanalesIntent
     data class UpdateCantidad(val cantidad: String) : TomasPanalesIntent
-    data class UpdateNota(val nota: String) : TomasPanalesIntent
+    data class UpdateNotaAlimentacion(val nota: String) : TomasPanalesIntent
+    data class UpdateNotaPanal(val nota: String) : TomasPanalesIntent
+    data class UpdateHoraToma(val timestamp: Long?) : TomasPanalesIntent
+    data class UpdateHoraPanal(val timestamp: Long?) : TomasPanalesIntent
+    data class UpdateFotoDelDia(val uri: String) : TomasPanalesIntent
     data object SaveToma : TomasPanalesIntent
     data object SavePanal : TomasPanalesIntent
     data object ResetState : TomasPanalesIntent

@@ -25,6 +25,14 @@ class BabyRepositoryImpl @Inject constructor(
         babyDao.insertBaby(baby.toEntity())
     }
 
+    override suspend fun deleteBaby(baby: Baby) {
+        babyDao.deleteBabyAndData(baby.toEntity())
+        // Si borramos el bebé activo, resetear preferencia
+        if (babyPreferences.activeBabyId == baby.id) {
+            babyPreferences.activeBabyId = -1L
+        }
+    }
+
     override fun getActiveBabyId(): Long = babyPreferences.activeBabyId
 
     override fun setActiveBabyId(id: Long) {
