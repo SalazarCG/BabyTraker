@@ -76,3 +76,34 @@ Se utiliza Hilt como estándar para la gestión de dependencias:
 3. **Pureza en Domain**: Esta capa no debe importar nada que empiece por `android.*` o `androidx.room.*`.
 4. **Manejo de Errores**: Siempre retornar `Result<T>` en las operaciones de dominio.
 5. **Independencia de Features**: Una feature no debe depender de otra feature; la comunicación se gestiona vía `:core` o `:app`.
+
+---
+
+## 📂 Estructura de Archivos Actual (Snapshot)
+
+Esta es la jerarquía de paquetes y archivos clave del proyecto para contexto rápido:
+
+- **`:app`**: Punto de entrada y navegación.
+  - `ui/`: Temas y componentes globales.
+  - `navigation/`: Grafos de navegación de Compose.
+  - `MainActivity.kt`: Activity principal.
+  - `BabyTrakerApp.kt`: Clase `Application` e inicialización de Hilt.
+
+- **`:core`**: Núcleo compartido y persistencia.
+  - `data/local/`:
+    - `dao/`: Interfaces de Room (ej: `BabyDao.kt`).
+    - `entities/`: Entidades de base de datos.
+    - `BabyTrakerDatabase.kt`: Configuración central de Room.
+  - `domain/`:
+    - `model/`: Modelos de negocio (ej: `BabyModels.kt`).
+    - `repository/`: Definiciones de contratos de datos.
+  - `di/`: Módulos globales de Hilt (Base de datos, etc.).
+
+- **`:features`**: (Estructura aplicada en `inicio`, `medicos`, `tomas_panales`)
+  - `domain/`: Casos de uso y lógica de negocio específica.
+  - `data/`: Repositorios y mappers de la feature.
+  - `presentation/`:
+    - `mvi/`: Definición de `State`, `Intent` y `Effect`.
+    - `viewmodel/`: Gestión de estado con `@HiltViewModel`.
+    - `ui/`: Pantallas y componentes en Compose.
+  - `di/`: Inyección de dependencias local a la feature.
