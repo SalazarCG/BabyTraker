@@ -1,1 +1,0 @@
-com.salazar.babytraker.core
